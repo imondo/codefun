@@ -35,7 +35,7 @@ test.call(1, "a", "b");
 test.myCall(1, "a", "b");
 ```
 
-改变this方向
+改变 `this` 方向
 
 
 ## apply
@@ -69,7 +69,7 @@ test.apply(1, "a", "b");
 test.myApply(1, "a", "b");
 ```
 
-改变 this 方向，参数为数组
+改变 `this` 方向，参数为数组
 
 ## bind
 
@@ -104,18 +104,88 @@ test.bind({a: 1})()
 test.myBind({a: 1}, 1, 2)()
 ```
 
-改变 this 指向，参数不限
+改变 `this` 指向，参数不限
 
-bind 执行默认返回的是函数。
+`bind` 执行默认返回的是函数。
 
-对于函数来说有两种方式调用，一种是直接调用，一种是通过 new 的方式
+对于函数来说有两种方式调用，一种是直接调用，一种是通过 `new` 的方式
 
-- 直接调用，这里选择了 apply 的方式实现，但是对于参数需要注意以下情况
+- 直接调用，这里选择了 `apply` 的方式实现，但是对于参数需要注意以下情况
 
-  - 因为 bind 可以实现类似这样的代码 f.bind(obj, 1)(2)，所以我们需要将两边的参数拼接起来
-  - 于是就有了这样的实现 args.concat(...arguments)
+  - 因为 bind 可以实现类似这样的代码 `f.bind(obj, 1)(2)`，所以我们需要将两边的参数拼接起来
+  - 于是就有了这样的实现 `args.concat(...arguments)`
 
-- 通过 new 调用，如何判断 this，对于 new 的情况来说，不会被任何方式改变 this
+- 通过 `new` 调用，如何判断 `this`，对于 `new` 的情况来说，不会被任何方式改变 `this`
 
 
 `test.bind({a: 1}, 1, 2)`
+
+## new 
+
+```js
+function create() {
+  let obj = {}
+  const Con = [].shift.call(arguments)
+  obj.__proto__ = Con.prototype
+  let result = Con.apply(obj, arguments)
+  return result instanceof Object ? result : obj
+}
+
+function Test(a) {
+  console.log(this, a)
+}
+
+console.dir(new Test(1))
+
+console.log(create(Test, 1));
+```
+
+在调用 new 的过程中会发生以上四件事情：
+
+- 新生成了一个对象
+- 链接到原型
+- 绑定 this
+- 返回新对象
+
+对于对象来说，其实都是通过 new 产生的，无论是 `function Foo()` 还是 `let a = { b : 1 }` 。
+
+对于创建一个对象来说，更推荐使用字面量的方式创建对象（无论性能上还是可读性）。因为你使用 `new Object()` 的方式创建对象需要通过作用域链一层层找到 `Object`，但是你使用字面量的方式就没这个问题。
+
+```js
+function Foo() {}
+// function 就是个语法糖
+// 内部等同于 new Function()
+let a = { b: 1 }
+// 这个字面量内部也是使用了 new Object()
+```
+
+## instanceof
+
+```js
+function myInstaceof(left, right) {
+  let prototype = right.prototype
+  left = left.__proto__
+  while(true) {
+    if (!left) {
+      return false
+    }
+    if (left === prototype) {
+      return true
+    }
+    left = left.__proto__
+  }
+}
+
+console.log([] instanceof Object);
+console.log({} instanceof Object);
+
+console.log(myInstaceof([], Object));
+console.log(myInstaceof({}, Object));
+
+```
+
+`instanceof` 可以正确的判断对象的类型，因为内部机制是通过判断对象的原型链中是不是能找到类型的 `prototype`
+
+- 获取类型的原型
+- 获得对象的原型
+- **一直循环判断对象的原型是否等于类型的原型**，直到对象原型为 `null`，因为原型链最终为 `null`
